@@ -1,7 +1,18 @@
 package com.xingcloud.sdk.serverside;
 
+import static com.xingcloud.sdk.serverside.LogSenderServerSideConstants.HOST;
+import static com.xingcloud.sdk.serverside.LogSenderServerSideConstants.HTTP;
+import static com.xingcloud.sdk.serverside.LogSenderServerSideConstants.PATH_PREFIX;
+import static com.xingcloud.sdk.serverside.LogSenderServerSideConstants.PORT;
+
+import com.xingcloud.sdk.serverside.model.HttpRequestEntityGroup;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.http.client.utils.URIBuilder;
+
 import java.io.Closeable;
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 
 /**
  * User: Z J Wu Date: 14-1-21 Time: 下午4:54 Package: com.xingcloud.sdk.serverside

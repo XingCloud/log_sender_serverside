@@ -6,7 +6,7 @@ import com.xingcloud.sdk.serverside.enums.FieldType;
 /**
  * User: Z J Wu Date: 14-1-21 Time: 上午10:18 Package: com.xingcloud.sdk.serverside.model
  */
-public class LogLineFieldDescriptor {
+public class FieldDescriptor {
   @Expose
   private String id;
   @Expose
@@ -16,13 +16,13 @@ public class LogLineFieldDescriptor {
   @Expose
   private String of;
 
-  public LogLineFieldDescriptor(String id, String name, FieldType type) {
+  public FieldDescriptor(String id, String name, FieldType type) {
     this.id = id;
     this.name = name;
     this.type = type;
   }
 
-  public LogLineFieldDescriptor(String id, String name, FieldType type, String of) {
+  public FieldDescriptor(String id, String name, FieldType type, String of) {
     this.id = id;
     this.name = name;
     this.type = type;
@@ -66,11 +66,11 @@ public class LogLineFieldDescriptor {
     if (this == o) {
       return true;
     }
-    if (!(o instanceof LogLineFieldDescriptor)) {
+    if (!(o instanceof FieldDescriptor)) {
       return false;
     }
 
-    LogLineFieldDescriptor that = (LogLineFieldDescriptor) o;
+    FieldDescriptor that = (FieldDescriptor) o;
 
     if (id != null ? !id.equals(that.id) : that.id != null) {
       return false;

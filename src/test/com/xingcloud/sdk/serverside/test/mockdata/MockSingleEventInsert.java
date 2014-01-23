@@ -1,4 +1,4 @@
-package com.xingcloud.sdk.serverside.test;
+package com.xingcloud.sdk.serverside.test.mockdata;
 
 import org.apache.commons.dbcp.BasicDataSource;
 import org.apache.commons.lang3.RandomStringUtils;
@@ -12,7 +12,7 @@ import java.util.Random;
 /**
  * User: Z J Wu Date: 14-1-21 Time: 下午6:18 Package: com.xingcloud.sdk.serverside.test
  */
-public class MockDataInsert {
+public class MockSingleEventInsert {
   public static void main(String[] args) throws SQLException {
     String[] eventPool = new String[]{"coin.gain.buy", "coin.gain.from_system",
                                       "coin.consume.enhance.weapon.TwinBladesAzzinoth",
