@@ -1,20 +1,21 @@
 package com.xingcloud.sdk.serverside.model;
 
-import com.google.gson.annotations.Expose;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.xingcloud.sdk.serverside.enums.FieldType;
 
 /**
  * User: Z J Wu Date: 14-1-21 Time: 上午10:18 Package: com.xingcloud.sdk.serverside.model
  */
+@JsonInclude(Include.NON_NULL)
 public class FieldDescriptor {
-  @Expose
   private String id;
-  @Expose
   private String name;
-  @Expose
   private FieldType type;
-  @Expose
   private String of;
+
+  public FieldDescriptor() {
+  }
 
   public FieldDescriptor(String id, String name, FieldType type) {
     this.id = id;

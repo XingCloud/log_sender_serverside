@@ -1,62 +1,71 @@
 package com.xingcloud.sdk.serverside.model;
 
+import static com.xingcloud.sdk.serverside.LogSenderServerSideConstants.LOG_TYPE_DB;
 import static com.xingcloud.sdk.serverside.enums.FieldType.EVENT;
 import static com.xingcloud.sdk.serverside.enums.FieldType.POSITION;
+import static com.xingcloud.sdk.serverside.enums.FieldType.TS;
 import static com.xingcloud.sdk.serverside.enums.FieldType.UID;
 import static com.xingcloud.sdk.serverside.enums.FieldType.UP;
 
-import com.google.gson.annotations.Expose;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.xingcloud.sdk.serverside.LogLineSenderException;
 import com.xingcloud.sdk.serverside.enums.FieldType;
 import com.xingcloud.sdk.serverside.enums.LogLineDescriptorStatus;
-import com.xingcloud.sdk.serverside.enums.LogType;
 
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 /**
  * User: Z J Wu Date: 14-1-21 Time: 下午4:27 Package: com.xingcloud.sdk.serverside.model
  */
-public class LineDescriptor {
-  @Expose
+@JsonTypeInfo(
+  use = JsonTypeInfo.Id.NAME,
+  include = JsonTypeInfo.As.PROPERTY,
+  property = "type")
+@JsonSubTypes({@JsonSubTypes.Type(value = DBRowDescriptor.class, name = LOG_TYPE_DB)})
+@JsonInclude(JsonInclude.Include.NON_NULL)
+public abstract class RowDescriptor implements Runnable {
   protected String projectId;
-  @Expose
   protected String name;
-  @Expose
-  protected LogType type;
+  protected List<FieldDescriptor> items;
 
-  protected List<FieldDescriptor> eventItems;
-  protected List<FieldDescriptor> upItems;
-  protected List<FieldDescriptor> valueOrTimestampItems;
-
-  protected FieldDescriptor uidFieldDescriptor;
-  protected FieldDescriptor positionFieldDescriptor;
-
+  @JsonIgnore
+  protected CountDownLatch signal;
+  protected TimeUnit sleepingTimeUnit;
+  protected long sleepingTime;
   protected LogLineDescriptorStatus status;
 
+  @JsonIgnore
+  protected List<FieldDescriptor> eventItems;
+  @JsonIgnore
+  protected List<FieldDescriptor> upItems;
+  @JsonIgnore
+  protected List<FieldDescriptor> valueItems;
+  @JsonIgnore
+  protected FieldDescriptor uidFieldDescriptor;
+  @JsonIgnore
+  protected FieldDescriptor positionFieldDescriptor;
+  @JsonIgnore
+  protected FieldDescriptor globalTimestampFieldDescriptor;
+  @JsonIgnore
   protected PositionRecorder positionRecorder;
-
-  protected CountDownLatch signal;
-
-  protected volatile boolean enabled;
-
-  protected SleepingParameter sleepingParameter;
-
+  @JsonIgnore
   protected int eventSize = 0;
+  @JsonIgnore
   protected int upSize = 0;
 
-  public LineDescriptor() {
+  public RowDescriptor() {
+    this.status = LogLineDescriptorStatus.INITED;
   }
 
-  public LineDescriptor(boolean enabled, CountDownLatch signal, SleepingParameter sleepingParameter, String projectId,
-                        String name, LogType type, List<FieldDescriptor> items) {
-    this.projectId = projectId;
-    this.enabled = enabled;
+  public void initItems(CountDownLatch signal) throws LogLineSenderException {
     this.signal = signal;
-    this.sleepingParameter = sleepingParameter;
-    this.name = name;
-    this.type = type;
     Iterator<FieldDescriptor> it = items.iterator();
     FieldDescriptor next;
     FieldType fieldType;
@@ -79,11 +88,13 @@ public class LineDescriptor {
           this.upItems = new ArrayList<>(1);
         }
         this.upItems.add(next);
+      } else if (TS.equals(fieldType)) {
+        this.globalTimestampFieldDescriptor = next;
       } else {
-        if (this.valueOrTimestampItems == null) {
-          this.valueOrTimestampItems = new ArrayList<>(1);
+        if (this.valueItems == null) {
+          this.valueItems = new ArrayList<>(1);
         }
-        this.valueOrTimestampItems.add(next);
+        this.valueItems.add(next);
       }
     }
   }
@@ -104,12 +115,12 @@ public class LineDescriptor {
     this.name = name;
   }
 
-  public LogType getType() {
-    return type;
+  public List<FieldDescriptor> getItems() {
+    return items;
   }
 
-  public void setType(LogType type) {
-    this.type = type;
+  public void setItems(List<FieldDescriptor> items) {
+    this.items = items;
   }
 
   public List<FieldDescriptor> getEventItems() {
@@ -128,6 +139,14 @@ public class LineDescriptor {
     this.upItems = upItems;
   }
 
+  public List<FieldDescriptor> getValueItems() {
+    return valueItems;
+  }
+
+  public void setValueItems(List<FieldDescriptor> valueItems) {
+    this.valueItems = valueItems;
+  }
+
   public FieldDescriptor getUidFieldDescriptor() {
     return uidFieldDescriptor;
   }
@@ -142,6 +161,14 @@ public class LineDescriptor {
 
   public void setPositionFieldDescriptor(FieldDescriptor positionFieldDescriptor) {
     this.positionFieldDescriptor = positionFieldDescriptor;
+  }
+
+  public FieldDescriptor getGlobalTimestampFieldDescriptor() {
+    return globalTimestampFieldDescriptor;
+  }
+
+  public void setGlobalTimestampFieldDescriptor(FieldDescriptor globalTimestampFieldDescriptor) {
+    this.globalTimestampFieldDescriptor = globalTimestampFieldDescriptor;
   }
 
   public LogLineDescriptorStatus getStatus() {
@@ -168,22 +195,6 @@ public class LineDescriptor {
     this.signal = signal;
   }
 
-  public boolean isEnabled() {
-    return enabled;
-  }
-
-  public void setEnabled(boolean enabled) {
-    this.enabled = enabled;
-  }
-
-  public SleepingParameter getSleepingParameter() {
-    return sleepingParameter;
-  }
-
-  public void setSleepingParameter(SleepingParameter sleepingParameter) {
-    this.sleepingParameter = sleepingParameter;
-  }
-
   public int getEventSize() {
     return eventSize;
   }
@@ -200,11 +211,19 @@ public class LineDescriptor {
     this.upSize = upSize;
   }
 
-  public List<FieldDescriptor> getValueOrTimestampItems() {
-    return valueOrTimestampItems;
+  public TimeUnit getSleepingTimeUnit() {
+    return sleepingTimeUnit;
   }
 
-  public void setValueOrTimestampItems(List<FieldDescriptor> valueOrTimestampItems) {
-    this.valueOrTimestampItems = valueOrTimestampItems;
+  public void setSleepingTimeUnit(TimeUnit sleepingTimeUnit) {
+    this.sleepingTimeUnit = sleepingTimeUnit;
+  }
+
+  public long getSleepingTime() {
+    return sleepingTime;
+  }
+
+  public void setSleepingTime(long sleepingTime) {
+    this.sleepingTime = sleepingTime;
   }
 }

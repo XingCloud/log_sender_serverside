@@ -1,0 +1,50 @@
+{
+  "type": "DB",
+  "project_id": "fhw",
+  "name": "game_log.game_point",
+  "db_host": "localhost",
+  "db_port": 3306,
+  "db_user_name": "root",
+  "db_password": "1",
+  "sleeping_time_unit": "SECONDS",
+  "sleeping_time": 10,
+  "items": [
+    {
+      "id": "GamePoint.EventVal",
+      "name": "event_val",
+      "type": "VAL",
+      "of": "GamePoint.Event"
+    },
+    {
+      "id": "GamePoint.Event",
+      "name": "event",
+      "type": "EVENT"
+    },
+    {
+      "id": "GamePoint.UserPropertyVal",
+      "name": "property_val",
+      "type": "VAL",
+      "of": "GamePoint.UserProperty"
+    },
+    {
+      "id": "GamePoint.UserProperty",
+      "name": "property",
+      "type": "UP"
+    },
+    {
+      "id": "GamePoint.position",
+      "name": "id",
+      "type": "POSITION"
+    },
+    {
+      "id": "GamePoint.uid",
+      "name": "uid",
+      "type": "UID"
+    },
+    {
+      "id": "GamePoint.ts",
+      "name": "timestamp",
+      "type": "TS"
+    }
+  ]
+}

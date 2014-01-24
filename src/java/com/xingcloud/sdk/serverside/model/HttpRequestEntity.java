@@ -9,8 +9,7 @@ public class HttpRequestEntity {
   private String id;
   private FieldType type;
   private String fieldName;
-  private long fieldValue;
-  private long timestamp;
+  private String fieldValue;
 
   public HttpRequestEntity(String id, FieldType type, String fieldName) {
     this.id = id;
@@ -42,19 +41,12 @@ public class HttpRequestEntity {
     this.fieldName = fieldName;
   }
 
-  public long getFieldValue() {
+  public String getFieldValue() {
     return fieldValue;
   }
 
-  public void setFieldValue(long fieldValue) {
+  public void setFieldValue(String fieldValue) {
     this.fieldValue = fieldValue;
   }
 
-  public long getTimestamp() {
-    return timestamp;
-  }
-
-  public void setTimestamp(long timestamp) {
-    this.timestamp = timestamp;
-  }
 }

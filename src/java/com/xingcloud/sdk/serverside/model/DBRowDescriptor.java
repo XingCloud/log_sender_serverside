@@ -2,15 +2,12 @@ package com.xingcloud.sdk.serverside.model;
 
 import static com.xingcloud.sdk.serverside.LogSenderServerSideUtils.closeAutoCloseable;
 import static com.xingcloud.sdk.serverside.enums.FieldType.EVENT;
-import static com.xingcloud.sdk.serverside.enums.FieldType.TS;
 import static com.xingcloud.sdk.serverside.enums.FieldType.UP;
+import static com.xingcloud.sdk.serverside.enums.LogLineDescriptorStatus.PREPARED;
 
-import com.google.gson.annotations.Expose;
-import com.google.gson.annotations.SerializedName;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.xingcloud.sdk.serverside.LogLineSenderException;
-import com.xingcloud.sdk.serverside.enums.FieldType;
 import com.xingcloud.sdk.serverside.enums.LogLineDescriptorStatus;
-import com.xingcloud.sdk.serverside.enums.LogType;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.dbcp.BasicDataSource;
 import org.apache.commons.lang3.StringUtils;
@@ -28,65 +25,53 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 
 /**
  * User: Z J Wu Date: 14-1-21 Time: 上午10:14 Package: com.xingcloud.sdk.serverside.model
  */
-public class DBLineDescriptor extends LineDescriptor implements Closeable, AutoCloseable, Runnable {
+public class DBRowDescriptor extends RowDescriptor implements Closeable, AutoCloseable, Runnable {
   private final String SQL_FIELD_SEPARATOR = ", ";
-  private static final Logger LOGGER = Logger.getLogger(DBLineDescriptor.class);
-  @Expose
-  @SerializedName("db_host")
-  private String host;
-  @Expose
-  @SerializedName("db_port")
-  private int port;
-  @Expose
-  @SerializedName("db_user_name")
+  private static final Logger LOGGER = Logger.getLogger(DBRowDescriptor.class);
+  private String dbHost;
+  private int dbPort;
   private String dbUserName;
-  @Expose
-  @SerializedName("db_password")
   private String dbPassword;
 
+  @JsonIgnore
   private BasicDataSource dataSource;
-
+  @JsonIgnore
   private List<String> rowNames;
 
   private String sqlQuery;
 
-  public DBLineDescriptor() {
+  public DBRowDescriptor() {
   }
 
-  public DBLineDescriptor(boolean enabled, CountDownLatch signal, SleepingParameter sleepingParameter, String projectId,
-                          String name, LogType type, List<FieldDescriptor> items, String host, int port,
-                          String dbUserName, String dbPassword) throws LogLineSenderException {
-    super(enabled, signal, sleepingParameter, projectId, name, type, items);
-    this.host = host;
-    this.port = port;
-    this.dbUserName = dbUserName;
-    this.dbPassword = dbPassword;
+  @Override
+  public void initItems(CountDownLatch signal) throws LogLineSenderException {
+    super.initItems(signal);
     setupDataSource();
     testConnection();
     rowNames = new ArrayList<>(items.size() - 1);
     buildQuerySql();
     initPositionFile();
+    this.status = PREPARED;
   }
 
-  public String getHost() {
-    return host;
+  public String getDbHost() {
+    return dbHost;
   }
 
-  public void setHost(String host) {
-    this.host = host;
+  public void setDbHost(String dbHost) {
+    this.dbHost = dbHost;
   }
 
-  public int getPort() {
-    return port;
+  public int getDbPort() {
+    return dbPort;
   }
 
-  public void setPort(int port) {
-    this.port = port;
+  public void setDbPort(int dbPort) {
+    this.dbPort = dbPort;
   }
 
   public String getDbUserName() {
@@ -97,8 +82,12 @@ public class DBLineDescriptor extends LineDescriptor implements Closeable, AutoC
     this.dbUserName = dbUserName;
   }
 
-  public String getSqlQuery() {
-    return sqlQuery;
+  public String getDbPassword() {
+    return dbPassword;
+  }
+
+  public void setDbPassword(String dbPassword) {
+    this.dbPassword = dbPassword;
   }
 
   private void testConnection() {
@@ -122,7 +111,7 @@ public class DBLineDescriptor extends LineDescriptor implements Closeable, AutoC
   }
 
   private void setupDataSource() {
-    String url = "jdbc:mysql://" + host + ":" + port + "/";
+    String url = "jdbc:mysql://" + dbHost + ":" + dbPort + "/";
     this.dataSource = new BasicDataSource();
     this.dataSource.setDriverClassName("com.mysql.jdbc.Driver");
     this.dataSource.setUsername(dbUserName);
@@ -153,6 +142,9 @@ public class DBLineDescriptor extends LineDescriptor implements Closeable, AutoC
     sb.append(SQL_FIELD_SEPARATOR);
     sb.append("t.");
     sb.append(uidFieldDescriptor.getName());
+    sb.append(SQL_FIELD_SEPARATOR);
+    sb.append("t.");
+    sb.append(globalTimestampFieldDescriptor.getName());
     sb.append(SQL_FIELD_SEPARATOR);
 
     boolean hasEvent = false;
@@ -198,11 +190,11 @@ public class DBLineDescriptor extends LineDescriptor implements Closeable, AutoC
       }
     }
 
-    if (CollectionUtils.isNotEmpty(valueOrTimestampItems)) {
+    if (CollectionUtils.isNotEmpty(valueItems)) {
       if (hasEvent || hasUP) {
         sb.append(SQL_FIELD_SEPARATOR);
       }
-      Iterator<FieldDescriptor> it = valueOrTimestampItems.iterator();
+      Iterator<FieldDescriptor> it = valueItems.iterator();
       FieldDescriptor next;
       String rowName;
       for (; ; ) {
@@ -225,7 +217,7 @@ public class DBLineDescriptor extends LineDescriptor implements Closeable, AutoC
     sb.append(positionFieldDescriptor.getName());
     sb.append(" > ?");
     this.sqlQuery = sb.toString();
-    LOGGER.info("Query SQL - " + this.sqlQuery);
+    LOGGER.info("Query SQL of(" + this.projectId + "." + this.name + ")=" + this.sqlQuery);
   }
 
   private void fetchLinesFromDB() throws LogLineSenderException {
@@ -243,6 +235,7 @@ public class DBLineDescriptor extends LineDescriptor implements Closeable, AutoC
     PreparedStatement pstmt = null;
     ResultSet rs = null;
     String positionColumnName = positionFieldDescriptor.getName();
+    String globalTSColumnName = globalTimestampFieldDescriptor.getName();
 
     try {
       conn = dataSource.getConnection();
@@ -253,16 +246,14 @@ public class DBLineDescriptor extends LineDescriptor implements Closeable, AutoC
       HttpRequestEntityGroup entityGroup;
       Map<String, HttpRequestEntity> entityMap;
       HttpRequestEntity existEntity;
-      String id, of, fieldName;
-      long valOrTS;
-      FieldType ft;
+      String id, of, fieldName, fieldVal;
       while (rs.next()) {
-        entityGroup = new HttpRequestEntityGroup(projectId, rs.getString(uidFieldDescriptor.getName()),
-                                                 eventSize + upSize);
-        entityMap = entityGroup.getEntityMap();
         currentLineNum = rs.getInt(positionColumnName);
         System.out.print(currentLineNum);
         System.out.print("\t");
+        entityGroup = new HttpRequestEntityGroup(projectId, rs.getString(uidFieldDescriptor.getName()),
+                                                 rs.getLong(globalTSColumnName), eventSize + upSize);
+        entityMap = entityGroup.getEntityMap();
 
         if (CollectionUtils.isNotEmpty(eventItems)) {
           for (FieldDescriptor fd : eventItems) {
@@ -282,25 +273,20 @@ public class DBLineDescriptor extends LineDescriptor implements Closeable, AutoC
             }
           }
         }
-        if (CollectionUtils.isNotEmpty(valueOrTimestampItems)) {
-          for (FieldDescriptor fd : valueOrTimestampItems) {
+        if (CollectionUtils.isNotEmpty(valueItems)) {
+          for (FieldDescriptor fd : valueItems) {
             of = fd.getOf();
             existEntity = entityGroup.getEntityMap().get(of);
             if (existEntity == null) {
 //              LOGGER.warn("This value or timestamp has no parent.");
               continue;
             }
-            valOrTS = rs.getLong(fd.getName());
-            if (valOrTS < 1) {
+            fieldVal = rs.getString(fd.getName());
+            if (StringUtils.isBlank(fieldVal)) {
 //              LOGGER.warn("Empty or 0 value will be ignored.");
               continue;
             }
-            ft = fd.getType();
-            if (TS.equals(ft)) {
-              existEntity.setTimestamp(valOrTS);
-            } else {
-              existEntity.setFieldValue(valOrTS);
-            }
+            existEntity.setFieldValue(fieldVal);
           }
         }
         System.out.println(URLDecoder.decode(entityGroup.toURI().toString(), "utf8"));
@@ -327,18 +313,20 @@ public class DBLineDescriptor extends LineDescriptor implements Closeable, AutoC
     }
   }
 
+  public String getSqlQuery() {
+    return sqlQuery;
+  }
+
   @Override
   public void run() {
-    TimeUnit timeUnit = sleepingParameter.getTimeUnit();
-    long sleepingTime = sleepingParameter.getTime();
     try {
-      while (enabled) {
+      while (true) {
         try {
           fetchLinesFromDB();
         } catch (LogLineSenderException e) {
           LOGGER.error("This round failed with exception.", e);
         }
-        timeUnit.sleep(sleepingTime);
+        this.sleepingTimeUnit.sleep(sleepingTime);
       }
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();

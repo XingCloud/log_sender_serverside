@@ -1,6 +1,7 @@
 package com.xingcloud.sdk.serverside.model;
 
 import static com.xingcloud.sdk.serverside.LogSenderServerSideConstants.EVENT_KEYWORDS;
+import static com.xingcloud.sdk.serverside.LogSenderServerSideConstants.GLOBAL_TS;
 import static com.xingcloud.sdk.serverside.LogSenderServerSideConstants.HOST;
 import static com.xingcloud.sdk.serverside.LogSenderServerSideConstants.HTTP;
 import static com.xingcloud.sdk.serverside.LogSenderServerSideConstants.PARAMETER_VAL_SEPARATOR;
@@ -26,9 +27,17 @@ public class HttpRequestEntityGroup {
 
   private String projectId;
   private String uid;
+  private long globalTimestamp;
   private Map<String, HttpRequestEntity> entityMap;
 
   public HttpRequestEntityGroup(String projectId, String uid, int mapSize) {
+    this.projectId = projectId;
+    this.uid = uid;
+    this.entityMap = new HashMap<>(mapSize);
+  }
+
+  public HttpRequestEntityGroup(String projectId, String uid, long globalTimestamp, int mapSize) {
+    this.globalTimestamp = globalTimestamp;
     this.projectId = projectId;
     this.uid = uid;
     this.entityMap = new HashMap<>(mapSize);
@@ -44,11 +53,13 @@ public class HttpRequestEntityGroup {
     }
     String path = PATH_PREFIX + "/" + projectId + "/" + uid;
     builder.setPath(path);
+    if (globalTimestamp > 0) {
+      builder.addParameter(GLOBAL_TS, String.valueOf(globalTimestamp));
+    }
 
     int eventCNT = 0, upCNT = 0;
     FieldType ft;
-    String paramName;
-    long val, ts;
+    String paramName, val;
     StringBuilder valueSB;
     for (HttpRequestEntity entity : entityMap.values()) {
       ft = entity.getType();
@@ -61,17 +72,9 @@ public class HttpRequestEntityGroup {
       }
       valueSB = new StringBuilder(entity.getFieldName());
       val = entity.getFieldValue();
-      ts = entity.getTimestamp();
-      if (val > 0) {
+      if (StringUtils.isNoneBlank(val)) {
         valueSB.append(PARAMETER_VAL_SEPARATOR);
         valueSB.append(val);
-      }
-      if (ts > 0) {
-        if (val == 0) {
-          valueSB.append(PARAMETER_VAL_SEPARATOR);
-        }
-        valueSB.append(PARAMETER_VAL_SEPARATOR);
-        valueSB.append(ts);
       }
       builder.addParameter(paramName, valueSB.toString());
     }
