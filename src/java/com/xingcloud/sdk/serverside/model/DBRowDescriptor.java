@@ -143,9 +143,11 @@ public class DBRowDescriptor extends RowDescriptor implements Closeable, AutoClo
     sb.append("t.");
     sb.append(uidFieldDescriptor.getName());
     sb.append(SQL_FIELD_SEPARATOR);
-    sb.append("t.");
-    sb.append(globalTimestampFieldDescriptor.getName());
-    sb.append(SQL_FIELD_SEPARATOR);
+    if (globalTimestampFieldDescriptor != null) {
+      sb.append("t.");
+      sb.append(globalTimestampFieldDescriptor.getName());
+      sb.append(SQL_FIELD_SEPARATOR);
+    }
 
     boolean hasEvent = false;
     if (eventSize > 0) {
@@ -235,7 +237,9 @@ public class DBRowDescriptor extends RowDescriptor implements Closeable, AutoClo
     PreparedStatement pstmt = null;
     ResultSet rs = null;
     String positionColumnName = positionFieldDescriptor.getName();
-    String globalTSColumnName = globalTimestampFieldDescriptor.getName();
+    String globalTSColumnName = (globalTimestampFieldDescriptor == null ? null
+                                                                        : globalTimestampFieldDescriptor.getName()
+    );
 
     try {
       conn = dataSource.getConnection();
@@ -251,8 +255,14 @@ public class DBRowDescriptor extends RowDescriptor implements Closeable, AutoClo
         currentLineNum = rs.getInt(positionColumnName);
         System.out.print(currentLineNum);
         System.out.print("\t");
-        entityGroup = new HttpRequestEntityGroup(projectId, rs.getString(uidFieldDescriptor.getName()),
-                                                 rs.getLong(globalTSColumnName), eventSize + upSize);
+        if (globalTimestampFieldDescriptor == null) {
+          entityGroup = new HttpRequestEntityGroup(projectId, rs.getString(uidFieldDescriptor.getName()),
+                                                   eventSize + upSize);
+        } else {
+          entityGroup = new HttpRequestEntityGroup(projectId, rs.getString(uidFieldDescriptor.getName()),
+                                                   eventSize + upSize, rs.getLong(globalTSColumnName));
+        }
+
         entityMap = entityGroup.getEntityMap();
 
         if (CollectionUtils.isNotEmpty(eventItems)) {

@@ -36,7 +36,7 @@ public class HttpRequestEntityGroup {
     this.entityMap = new HashMap<>(mapSize);
   }
 
-  public HttpRequestEntityGroup(String projectId, String uid, long globalTimestamp, int mapSize) {
+  public HttpRequestEntityGroup(String projectId, String uid, int mapSize, long globalTimestamp) {
     this.globalTimestamp = globalTimestamp;
     this.projectId = projectId;
     this.uid = uid;

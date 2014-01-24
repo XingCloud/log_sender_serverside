@@ -13,7 +13,7 @@ public class TestEventPropertyRun {
   public static void main(String[] args) throws LogLineSenderException, InterruptedException {
     CountDownLatch signal = new CountDownLatch(1);
     RowDescriptor rd = JsonReaderWriter.parseAndInit("./example/event_and_user_property/game_point.json", signal);
-    new Thread(rd, "Thread-LogLineFetcher(" + rd.getProjectId() + "." + rd.getName() + ")").start();
+    new Thread(rd, "Thread-LogFetcher(" + rd.getProjectId() + "." + rd.getName() + ")").start();
     signal.await();
   }
 }

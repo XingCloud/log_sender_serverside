@@ -14,7 +14,7 @@ public class TestJsonRead {
 
   public static void main(String[] args) throws IOException, LogLineSenderException, InterruptedException {
     CountDownLatch signal = new CountDownLatch(1);
-    String filePath = "./example/event_and_user_property/game_point.json";
+    String filePath = "./example/event_and_user_property/coin.json";
     RowDescriptor rd = JsonReaderWriter.parseAndInit(filePath, signal);
     System.out.println(JsonReaderWriter.toJson(rd));
     new Thread(rd, "Thread-LogLineFetcher(" + rd.getName() + ")").start();
