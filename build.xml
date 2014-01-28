@@ -1,0 +1,77 @@
+<project name="LogSenderServerSide" default="Show-Usage" basedir=".">
+  <description>LogSenderServerSide</description>
+  <!-- Lib jar name -->
+  <property name="jar.name" value="xa.logsender.serverside.all-in-one.jar" />
+
+  <!-- Cache properties -->
+  <property name="src.dir" location="src/java" />
+  <property name="conf.dir" value="conf" />
+  <property name="lib.dir" location="lib" />
+  <property name="build.dir" location="build" />
+  <property name="dist.dir" location="dist" />
+
+  <target name="Show-Usage">
+  </target>
+
+  <pathconvert property="libs.project" pathsep=" ">
+    <mapper>
+      <chainedmapper>
+        <flattenmapper />
+        <globmapper from="*" to="lib/*" />
+      </chainedmapper>
+    </mapper>
+    <path>
+      <fileset dir="${lib.dir}">
+        <include name="**/*.jar" />
+      </fileset>
+    </path>
+  </pathconvert>
+
+  <!-- Classpath which compile used -->
+  <path id="generic.ref.classpath">
+    <fileset dir="${lib.dir}" includes="**/*.jar" />
+  </path>
+
+  <target name="init">
+    <mkdir dir="${build.dir}" />
+    <mkdir dir="${dist.dir}" />
+  </target>
+
+  <target name="clean">
+    <delete dir="${build.dir}" />
+    <delete dir="${dist.dir}" />
+  </target>
+
+  <target name="compile" description="compile the source">
+    <javac target="1.7" srcdir="${src.dir}" destdir="${build.dir}" classpathref="generic.ref.classpath"
+           includeantruntime="on" debug="on" />
+  </target>
+
+  <target name="copy-static">
+    <copy todir="${build.dir}">
+      <fileset dir="${conf.dir}">
+        <include name="*.xml" />
+      </fileset>
+    </copy>
+  </target>
+
+  <target name="unzip-lib-jar">
+    <unzip dest="${build.dir}">
+      <fileset dir="${lib.dir}">
+        <include name="**/*.jar" />
+        <include name="*.jar" />
+      </fileset>
+    </unzip>
+  </target>
+
+  <target name="build"
+          depends="clean, init, compile, unzip-lib-jar, copy-static">
+    <delete file="${dist.dir}/${jar.name}" />
+    <jar basedir="${build.dir}" destfile="${dist.dir}/${jar.name}">
+      <manifest>
+        <attribute name="Main-Class" value="com.xingcloud.sdk.serverside.MainRun" />
+      </manifest>
+    </jar>
+  </target>
+
+</project>

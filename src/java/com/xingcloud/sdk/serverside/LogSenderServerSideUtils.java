@@ -1,18 +1,10 @@
 package com.xingcloud.sdk.serverside;
 
-import static com.xingcloud.sdk.serverside.LogSenderServerSideConstants.HOST;
-import static com.xingcloud.sdk.serverside.LogSenderServerSideConstants.HTTP;
-import static com.xingcloud.sdk.serverside.LogSenderServerSideConstants.PATH_PREFIX;
-import static com.xingcloud.sdk.serverside.LogSenderServerSideConstants.PORT;
-
-import com.xingcloud.sdk.serverside.model.HttpRequestEntityGroup;
-import org.apache.commons.lang3.StringUtils;
-import org.apache.http.client.utils.URIBuilder;
-
 import java.io.Closeable;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.net.URI;
-import java.net.URISyntaxException;
+import java.net.URLDecoder;
 
 /**
  * User: Z J Wu Date: 14-1-21 Time: 下午4:54 Package: com.xingcloud.sdk.serverside
@@ -20,6 +12,14 @@ import java.net.URISyntaxException;
 public class LogSenderServerSideUtils {
   public static final int SIZEOF_INT = Integer.SIZE / Byte.SIZE;
   public static final int SIZEOF_LONG = Long.SIZE / Byte.SIZE;
+
+  public static String decodeURI(URI uri) {
+    try {
+      return uri == null ? null : URLDecoder.decode(uri.toString(), "utf8");
+    } catch (UnsupportedEncodingException e) {
+      return null;
+    }
+  }
 
   public static void closeCloseable(Closeable closeable) {
     if (closeable != null) {

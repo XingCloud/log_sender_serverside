@@ -11,6 +11,23 @@
     </layout>
   </appender>
 
+  <!-- For http error log -->
+  <appender name="HTTP-ERROR"
+            class="org.apache.log4j.DailyRollingFileAppender">
+    <param name="File" value="/var/log/xa_sdk_service_side/http.error.log" />
+    <param name="Append" value="true" />
+    <param name="Threshold" value="info" />
+    <param name="DatePattern" value="'.'yyyy-MM-dd" />
+    <layout class="org.apache.log4j.PatternLayout">
+      <param name="ConversionPattern" value="%m%n" />
+    </layout>
+  </appender>
+
+  <logger name="com.ginericlog">
+    <level value="info" />
+    <appender-ref ref="HTTP-ERROR" />
+  </logger>
+
   <logger name="com.xingcloud">
     <level value="info" />
     <appender-ref ref="CONSOLE" />

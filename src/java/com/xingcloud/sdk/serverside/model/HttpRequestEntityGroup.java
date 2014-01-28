@@ -10,7 +10,7 @@ import static com.xingcloud.sdk.serverside.LogSenderServerSideConstants.PORT;
 import static com.xingcloud.sdk.serverside.LogSenderServerSideConstants.UP_KEYWORDS;
 import static com.xingcloud.sdk.serverside.enums.FieldType.EVENT;
 
-import com.xingcloud.sdk.serverside.LogLineSenderException;
+import com.xingcloud.sdk.serverside.LogSenderException;
 import com.xingcloud.sdk.serverside.enums.FieldType;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.client.utils.URIBuilder;
@@ -43,13 +43,13 @@ public class HttpRequestEntityGroup {
     this.entityMap = new HashMap<>(mapSize);
   }
 
-  public URI toURI() throws LogLineSenderException, URISyntaxException {
+  public URI toURI() throws LogSenderException {
     URIBuilder builder = new URIBuilder();
     builder.setScheme(HTTP);
     builder.setHost(HOST);
     builder.setPort(PORT);
     if (StringUtils.isBlank(uid)) {
-      throw new LogLineSenderException("Empty uid field.");
+      throw new LogSenderException("Empty uid field.");
     }
     String path = PATH_PREFIX + "/" + projectId + "/" + uid;
     builder.setPath(path);
@@ -79,7 +79,12 @@ public class HttpRequestEntityGroup {
       builder.addParameter(paramName, valueSB.toString());
     }
 
-    URI uri = builder.build();
+    URI uri;
+    try {
+      uri = builder.build();
+    } catch (URISyntaxException e) {
+      throw new LogSenderException(e);
+    }
     return uri;
   }
 

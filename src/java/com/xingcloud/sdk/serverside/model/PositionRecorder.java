@@ -17,6 +17,10 @@ public class PositionRecorder {
   private File positionFile;
 
   public PositionRecorder(String positionFilePath, String positionFileName) {
+    File path = new File(positionFilePath);
+    if (!path.exists()) {
+      path.mkdir();
+    }
     this.positionFile = new File(positionFilePath + File.separatorChar + positionFileName);
   }
 

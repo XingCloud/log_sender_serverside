@@ -6,7 +6,7 @@ import static com.xingcloud.sdk.serverside.enums.FieldType.UP;
 import static com.xingcloud.sdk.serverside.enums.LogLineDescriptorStatus.PREPARED;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.xingcloud.sdk.serverside.LogLineSenderException;
+import com.xingcloud.sdk.serverside.LogSenderException;
 import com.xingcloud.sdk.serverside.enums.LogLineDescriptorStatus;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.dbcp.BasicDataSource;
@@ -15,7 +15,6 @@ import org.apache.log4j.Logger;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.net.URLDecoder;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -25,6 +24,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.LinkedBlockingQueue;
 
 /**
  * User: Z J Wu Date: 14-1-21 Time: 上午10:14 Package: com.xingcloud.sdk.serverside.model
@@ -48,8 +48,9 @@ public class DBRowDescriptor extends RowDescriptor implements Closeable, AutoClo
   }
 
   @Override
-  public void initItems(CountDownLatch signal) throws LogLineSenderException {
-    super.initItems(signal);
+  public void initItems(CountDownLatch signa, LinkedBlockingQueue<HttpRequestEntityGroup> queue) throws
+    LogSenderException {
+    super.initItems(signal, queue);
     setupDataSource();
     testConnection();
     rowNames = new ArrayList<>(items.size() - 1);
@@ -120,7 +121,7 @@ public class DBRowDescriptor extends RowDescriptor implements Closeable, AutoClo
   }
 
   private void initPositionFile() {
-    this.positionRecorder = new PositionRecorder("d:/positions", getName() + ".position");
+    this.positionRecorder = new PositionRecorder("./positions", getName() + ".position");
   }
 
   @Override
@@ -132,9 +133,9 @@ public class DBRowDescriptor extends RowDescriptor implements Closeable, AutoClo
     }
   }
 
-  private void buildQuerySql() throws LogLineSenderException {
+  private void buildQuerySql() throws LogSenderException {
     if (positionFieldDescriptor == null) {
-      throw new LogLineSenderException("Cannot parse any row for line-position-recorder.");
+      throw new LogSenderException("Cannot parse any row for line-position-recorder.");
     }
 
     StringBuilder sb = new StringBuilder("SELECT t.");
@@ -222,7 +223,7 @@ public class DBRowDescriptor extends RowDescriptor implements Closeable, AutoClo
     LOGGER.info("Query SQL of(" + this.projectId + "." + this.name + ")=" + this.sqlQuery);
   }
 
-  private void fetchLinesFromDB() throws LogLineSenderException {
+  private void fetchLinesFromDB() throws LogSenderException {
     long t1 = System.currentTimeMillis();
     long t2;
     int currentLineNum = -1, lastLineNum;
@@ -230,7 +231,7 @@ public class DBRowDescriptor extends RowDescriptor implements Closeable, AutoClo
       lastLineNum = positionRecorder.read();
       LOGGER.info("Last operation line count - " + lastLineNum);
     } catch (IOException e) {
-      throw new LogLineSenderException(e);
+      throw new LogSenderException(e);
     }
 
     Connection conn = null;
@@ -299,10 +300,10 @@ public class DBRowDescriptor extends RowDescriptor implements Closeable, AutoClo
             existEntity.setFieldValue(fieldVal);
           }
         }
-        System.out.println(URLDecoder.decode(entityGroup.toURI().toString(), "utf8"));
+        queue.put(entityGroup);
       }
     } catch (Exception e) {
-      throw new LogLineSenderException(e);
+      throw new LogSenderException(e);
     } finally {
       if (currentLineNum >= 0) {
         lastLineNum = currentLineNum;
@@ -310,7 +311,7 @@ public class DBRowDescriptor extends RowDescriptor implements Closeable, AutoClo
           positionRecorder.write(lastLineNum);
           LOGGER.info("This time operated log to line - " + currentLineNum);
         } catch (IOException e) {
-          throw new LogLineSenderException(e);
+          throw new LogSenderException(e);
         }
       } else {
         LOGGER.info("This time didn't operate any log. Last position is " + lastLineNum);
@@ -333,7 +334,7 @@ public class DBRowDescriptor extends RowDescriptor implements Closeable, AutoClo
       while (true) {
         try {
           fetchLinesFromDB();
-        } catch (LogLineSenderException e) {
+        } catch (LogSenderException e) {
           LOGGER.error("This round failed with exception.", e);
         }
         this.sleepingTimeUnit.sleep(sleepingTime);

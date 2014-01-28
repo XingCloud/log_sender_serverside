@@ -11,7 +11,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.xingcloud.sdk.serverside.LogLineSenderException;
+import com.xingcloud.sdk.serverside.LogSenderException;
 import com.xingcloud.sdk.serverside.enums.FieldType;
 import com.xingcloud.sdk.serverside.enums.LogLineDescriptorStatus;
 
@@ -19,6 +19,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -37,6 +38,8 @@ public abstract class RowDescriptor implements Runnable {
 
   @JsonIgnore
   protected CountDownLatch signal;
+  @JsonIgnore
+  protected LinkedBlockingQueue<HttpRequestEntityGroup> queue;
   protected TimeUnit sleepingTimeUnit;
   protected long sleepingTime;
   protected LogLineDescriptorStatus status;
@@ -64,7 +67,9 @@ public abstract class RowDescriptor implements Runnable {
     this.status = LogLineDescriptorStatus.INITED;
   }
 
-  public void initItems(CountDownLatch signal) throws LogLineSenderException {
+  public void initItems(CountDownLatch signal, LinkedBlockingQueue<HttpRequestEntityGroup> queue) throws
+    LogSenderException {
+    this.queue = queue;
     this.signal = signal;
     Iterator<FieldDescriptor> it = items.iterator();
     FieldDescriptor next;
