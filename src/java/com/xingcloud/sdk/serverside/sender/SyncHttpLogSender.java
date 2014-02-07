@@ -54,6 +54,7 @@ public class SyncHttpLogSender extends HttpLogSender {
 
   @Override
   public void run() {
+    LOGGER.info(Thread.currentThread().getName() + " inited.");
     HttpRequestEntityGroup entityGroup;
     URI uri;
     String result;
@@ -85,7 +86,7 @@ public class SyncHttpLogSender extends HttpLogSender {
         } catch (LogSenderException e) {
           logHttpError(RESULTS_NOT_OK, e, uri);
         }
-        LOGGER.info("Send log ok - " + uri.toString());
+//        LOGGER.info("Send log ok - " + uri.toString());
       }
     } catch (InterruptedException e) {
       LOGGER.warn("Thread - " + Thread.currentThread().getName() + " is interrupt.");

@@ -23,7 +23,6 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
 
 /**
@@ -48,9 +47,8 @@ public class DBRowDescriptor extends RowDescriptor implements Closeable, AutoClo
   }
 
   @Override
-  public void initItems(CountDownLatch signa, LinkedBlockingQueue<HttpRequestEntityGroup> queue) throws
-    LogSenderException {
-    super.initItems(signal, queue);
+  public void initItems(LinkedBlockingQueue<HttpRequestEntityGroup> queue) throws LogSenderException {
+    super.initItems(queue);
     setupDataSource();
     testConnection();
     rowNames = new ArrayList<>(items.size() - 1);
@@ -229,7 +227,7 @@ public class DBRowDescriptor extends RowDescriptor implements Closeable, AutoClo
     int currentLineNum = -1, lastLineNum;
     try {
       lastLineNum = positionRecorder.read();
-      LOGGER.info("Last operation line count - " + lastLineNum);
+//      LOGGER.info("Last operation line count(" + this.id + ") - " + lastLineNum);
     } catch (IOException e) {
       throw new LogSenderException(e);
     }
@@ -241,7 +239,7 @@ public class DBRowDescriptor extends RowDescriptor implements Closeable, AutoClo
     String globalTSColumnName = (globalTimestampFieldDescriptor == null ? null
                                                                         : globalTimestampFieldDescriptor.getName()
     );
-
+    int cnt = 0;
     try {
       conn = dataSource.getConnection();
       pstmt = conn.prepareStatement(sqlQuery);
@@ -254,8 +252,6 @@ public class DBRowDescriptor extends RowDescriptor implements Closeable, AutoClo
       String id, of, fieldName, fieldVal;
       while (rs.next()) {
         currentLineNum = rs.getInt(positionColumnName);
-        System.out.print(currentLineNum);
-        System.out.print("\t");
         if (globalTimestampFieldDescriptor == null) {
           entityGroup = new HttpRequestEntityGroup(projectId, rs.getString(uidFieldDescriptor.getName()),
                                                    eventSize + upSize);
@@ -301,6 +297,7 @@ public class DBRowDescriptor extends RowDescriptor implements Closeable, AutoClo
           }
         }
         queue.put(entityGroup);
+        ++cnt;
       }
     } catch (Exception e) {
       throw new LogSenderException(e);
@@ -309,18 +306,19 @@ public class DBRowDescriptor extends RowDescriptor implements Closeable, AutoClo
         lastLineNum = currentLineNum;
         try {
           positionRecorder.write(lastLineNum);
-          LOGGER.info("This time operated log to line - " + currentLineNum);
+//          LOGGER.info("This time operated log to line(" + this.id + ") - " + currentLineNum);
         } catch (IOException e) {
           throw new LogSenderException(e);
         }
       } else {
-        LOGGER.info("This time didn't operate any log. Last position is " + lastLineNum);
+//        LOGGER.info("This time didn't operate any log(" + this.id + "). Last position is " + lastLineNum);
       }
       closeAutoCloseable(rs);
       closeAutoCloseable(pstmt);
       closeAutoCloseable(conn);
       t2 = System.currentTimeMillis();
-      LOGGER.info("This round finished in " + (t2 - t1) + " milliseconds");
+      LOGGER.info(
+        "[" + this.id + "] this round send " + (cnt) + " lines in " + (t2 - t1) + " milliseconds, current row is " + lastLineNum);
     }
   }
 

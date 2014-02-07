@@ -8,7 +8,6 @@ import com.xingcloud.sdk.serverside.model.RowDescriptor;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
 
 /**
@@ -16,8 +15,7 @@ import java.util.concurrent.LinkedBlockingQueue;
  */
 public class JsonReaderWriter {
 
-  public static RowDescriptor parseAndInit(String filePath, CountDownLatch signal,
-                                           LinkedBlockingQueue<HttpRequestEntityGroup> queue) throws
+  public static RowDescriptor parseAndInit(String filePath, LinkedBlockingQueue<HttpRequestEntityGroup> queue) throws
     LogSenderException {
     ObjectMapper mapper = new ObjectMapper();
     mapper.setPropertyNamingStrategy(new CamelCaseNamingStrategy());
@@ -27,7 +25,7 @@ public class JsonReaderWriter {
     } catch (IOException e) {
       throw new LogSenderException(e);
     }
-    rd.initItems(signal, queue);
+    rd.initItems(queue);
     return rd;
   }
 

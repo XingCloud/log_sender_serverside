@@ -32,6 +32,7 @@ import java.util.concurrent.TimeUnit;
 @JsonSubTypes({@JsonSubTypes.Type(value = DBRowDescriptor.class, name = LOG_TYPE_DB)})
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public abstract class RowDescriptor implements Runnable {
+  protected String id;
   protected String projectId;
   protected String name;
   protected List<FieldDescriptor> items;
@@ -67,10 +68,9 @@ public abstract class RowDescriptor implements Runnable {
     this.status = LogLineDescriptorStatus.INITED;
   }
 
-  public void initItems(CountDownLatch signal, LinkedBlockingQueue<HttpRequestEntityGroup> queue) throws
-    LogSenderException {
+  public void initItems(LinkedBlockingQueue<HttpRequestEntityGroup> queue) throws LogSenderException {
+    this.id = this.projectId + "." + this.name;
     this.queue = queue;
-    this.signal = signal;
     Iterator<FieldDescriptor> it = items.iterator();
     FieldDescriptor next;
     FieldType fieldType;
